@@ -8,11 +8,11 @@ module.exports.markdown = (content = '') => {
   if (!content.trim()) {
     return ''
   }
-  return marked(removeInvalidDataURL(content), {sanitize: true})
+  return marked(removeInvalidDataURL(content), { sanitize: true })
 }
 
 // A handy debugging function we can use to sort of "console.log" our data
-module.exports.dump = (obj) => JSON.stringify(obj, null, 2)
+module.exports.dump = obj => JSON.stringify(obj, null, 2)
 
 module.exports.formatMetaTitle = (title, localeCode = 'en-US') => {
   if (!title) {
@@ -21,17 +21,17 @@ module.exports.formatMetaTitle = (title, localeCode = 'en-US') => {
   return `${title.charAt(0).toUpperCase()}${title.slice(1)} — ${translate('defaultTitle', localeCode)}`
 }
 
-function isCustomCredentials (settings) {
+function isCustomCredentials(settings) {
   const spaceId = process.env.CONTENTFUL_SPACE_ID
   const deliveryToken = process.env.CONTENTFUL_DELIVERY_TOKEN
   const previewToken = process.env.CONTENTFUL_PREVIEW_TOKEN
 
-  return settings.spaceId !== spaceId ||
-    settings.deliveryToken !== deliveryToken ||
-    settings.previewToken !== previewToken
+  return (
+    settings.spaceId !== spaceId || settings.deliveryToken !== deliveryToken || settings.previewToken !== previewToken
+  )
 }
 
-function cleanupQueryParameters (query) {
+function cleanupQueryParameters(query) {
   const cleanQuery = Object.assign({}, query)
   delete cleanQuery.space_id
   delete cleanQuery.delivery_token
@@ -40,18 +40,18 @@ function cleanupQueryParameters (query) {
   return cleanQuery
 }
 
-function updateSettingsQuery (request, response, settings) {
+function updateSettingsQuery(request, response, settings) {
   const cleanQuery = cleanupQueryParameters(request.query)
 
   let settingsQuery = Object.assign({}, cleanQuery, {
-    editorial_features: settings.editorialFeatures ? 'enabled' : 'disabled'
+    editorial_features: settings.editorialFeatures ? 'enabled' : 'disabled',
   })
 
   if (isCustomCredentials(settings)) {
     settingsQuery = Object.assign(settingsQuery, {
       space_id: settings.spaceId,
       delivery_token: settings.deliveryToken,
-      preview_token: settings.previewToken
+      preview_token: settings.previewToken,
     })
   }
 
@@ -67,7 +67,7 @@ module.exports.updateSettingsQuery = updateSettingsQuery
  * Evil users might try to add base64 url data to execute js code
  * so we should purge any potentially harmful data to mitigate risk
  */
-function removeInvalidDataURL (content) {
+function removeInvalidDataURL(content) {
   let regex = /data:\S+;base64\S*/gm
   return content.replace(regex, '#')
 }

@@ -19,13 +19,12 @@ const shouldAttachEntryState = require('../lib/should-attach-entry-state')
  * @returns {undefined}
  */
 module.exports.getLandingPage = async (request, response, next) => {
-  let pathname = url.parse(request.url).pathname.split('/').filter(Boolean)[0]
+  let pathname = url
+    .parse(request.url)
+    .pathname.split('/')
+    .filter(Boolean)[0]
   pathname = pathname || 'home'
-  let landingPage = await getLandingPage(
-    pathname,
-    response.locals.currentLocale.code,
-    response.locals.currentApi.id
-  )
+  let landingPage = await getLandingPage(pathname, response.locals.currentLocale.code, response.locals.currentApi.id)
 
   // Attach entry state flags when using preview API
   if (shouldAttachEntryState(response)) {

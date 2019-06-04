@@ -14,8 +14,8 @@ block content
   .layout-centered
     +editorialFeatures(landingPage)
   .modules-container
-    if landingPage.fields.contentModules && landingPage.fields.contentModules.length
-      each module in landingPage.fields.contentModules
+    if landingPage.entry.fields.contentModules && landingPage.entry.fields.contentModules.length
+      each module in landingPage.entry.fields.contentModules
         case module.sys.contentType.sys.id
           when 'layoutCopy'
             +moduleCopy(module)
@@ -24,6 +24,6 @@ block content
             +moduleHeroImage(module)
 
           when 'layoutHighlightedCourse'
-            +moduleHighlightedCourse(module, module.fields.course)
+            +moduleHighlightedCourse(module, module.fields.course, landingPage.variation)
     else
       +emptyModule()

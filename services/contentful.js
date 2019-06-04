@@ -12,7 +12,7 @@ let previewClient = null
  *
  * @returns {undefined}
  */
-module.exports.initClients = (options) => {
+module.exports.initClients = options => {
   // Getting the app version
   const { version } = require('../package.json')
   const applicationName = `the-example-app.nodejs/${version}`
@@ -20,7 +20,7 @@ module.exports.initClients = (options) => {
   const config = options || {
     spaceId: process.env.CONTENTFUL_SPACE_ID,
     deliveryToken: process.env.CONTENTFUL_DELIVERY_TOKEN,
-    previewToken: process.env.CONTENTFUL_PREVIEW_TOKEN
+    previewToken: process.env.CONTENTFUL_PREVIEW_TOKEN,
   }
   deliveryClient = createClient({
     application: applicationName,
@@ -29,7 +29,7 @@ module.exports.initClients = (options) => {
     // Environment variable is used here to enable testing this app internally at Contentful.
     // You can just omit the host since it defaults to 'cdn.contentful.com'
     host: process.env.CONTENTFUL_DELIVERY_API_HOST,
-    removeUnresolved: true
+    removeUnresolved: true,
   })
   previewClient = createClient({
     application: applicationName,
@@ -38,7 +38,7 @@ module.exports.initClients = (options) => {
     // Environment variable is used here to enable testing this app internally at Contentful.
     // You should use 'preview.contentful.com' as host to use the preview api
     host: process.env.CONTENTFUL_PREVIEW_API_HOST,
-    removeUnresolved: true
+    removeUnresolved: true,
   })
 }
 
@@ -47,19 +47,18 @@ module.exports.initClients = (options) => {
  * @param api - string - the api to use, cda or cap. Default: 'cda'
  * @returns {undefined}
  */
-module.exports.getSpace = throwOnEmptyResult('Space', (api = 'cda') => {
-  return getClient(api).getSpace()
-})
+module.exports.getSpace = throwOnEmptyResult('Space', (api = 'cda') => getClient(api).getSpace())
 
 /**
  * Get the environment locales
  * @param api - string - the api to use, cda or cap. Default: 'cda'
  * @returns {undefined}
  */
-module.exports.getLocales = throwOnEmptyResult('Environment', (api = 'cda') => {
-  return getClient(api).getLocales()
-    .then((response) => response.items)
-})
+module.exports.getLocales = throwOnEmptyResult('Environment', (api = 'cda') =>
+  getClient(api)
+    .getLocales()
+    .then(response => response.items)
+)
 
 /**
  * Gets an entry. Used to detect the `Draft` or `Pending Changes` state
@@ -69,10 +68,11 @@ module.exports.getLocales = throwOnEmptyResult('Environment', (api = 'cda') => {
  * @returns {Object}
  */
 
-module.exports.getEntry = throwOnEmptyResult('Entry', (entryId, contentType, api = 'cda') => {
-  return getClient(api).getEntries({content_type: contentType, 'sys.id': entryId})
-    .then((response) => response.items[0])
-})
+module.exports.getEntry = throwOnEmptyResult('Entry', (entryId, contentType, api = 'cda') =>
+  getClient(api)
+    .getEntries({ content_type: contentType, 'sys.id': entryId })
+    .then(response => response.items[0])
+)
 
 /**
  * Get all entries with content_type `course`
@@ -80,15 +80,16 @@ module.exports.getEntry = throwOnEmptyResult('Entry', (entryId, contentType, api
  * @param api - string the api enpoint to use when fetching the data
  * @returns {Array<Object>}
  */
-module.exports.getCourses = throwOnEmptyResult('Course', (locale = 'en-US', api = 'cda') => {
-  return getClient(api).getEntries({
-    content_type: 'course',
-    locale,
-    order: '-sys.createdAt', // Ordering the entries by creation date
-    include: 1 // We use include param to increase the link level, the include value goes from 1 to 6
-  })
-    .then((response) => response.items)
-})
+module.exports.getCourses = throwOnEmptyResult('Course', (locale = 'en-US', api = 'cda') =>
+  getClient(api)
+    .getEntries({
+      content_type: 'course',
+      locale,
+      order: '-sys.createdAt', // Ordering the entries by creation date
+      include: 1, // We use include param to increase the link level, the include value goes from 1 to 6
+    })
+    .then(response => response.items)
+)
 
 /**
  * Get entries of content_type `layout` e.g. Landing page
@@ -97,16 +98,30 @@ module.exports.getCourses = throwOnEmptyResult('Course', (locale = 'en-US', api 
  * @param api - string - the api enpoint to use when fetching the data
  * @returns {Object}
  */
-module.exports.getLandingPage = (slug, locale = 'en-US', api = 'cda') => {
+module.exports.getLandingPage = async (slug, locale = 'en-US', api = 'cda') => {
+  const optimizely = require('@optimizely/optimizely-sdk')
+  const rp = require('request-promise')
+  const DATAFILE_URL = 'https://cdn.optimizely.com/datafiles/FoKjqxjaBskTcZ5byTNZC8.json'
+  const datafile = await rp({ uri: DATAFILE_URL, json: true })
+  const optimizelyClient = optimizely.createInstance({
+    datafile,
+  })
+  const variation = optimizelyClient.activate('landing-page-hero', 'user_2')
+  // console.log(variation)
+
   // Even though we need a single entry, we request it using the collection endpoint
   // To get all the linked refs in one go, the SDK will use the data and resolve the links automatically
-  return getClient(api).getEntries({
-    content_type: 'layout',
-    locale,
-    'fields.slug': slug,
-    include: 3
-  })
-    .then((response) => response.items[0])
+  // if (variation === 'variation_2') {
+  const entry = await getClient(api)
+    .getEntries({
+      content_type: 'layout',
+      locale,
+      'fields.slug': slug,
+      include: 4,
+    })
+    .then(response => response.items[0])
+
+  return { variation, entry }
 }
 
 /**
@@ -116,22 +131,24 @@ module.exports.getLandingPage = (slug, locale = 'en-US', api = 'cda') => {
  * @param api - string - the api enpoint to use when fetching the data
  * @returns {Object}
  */
-module.exports.getCourse = throwOnEmptyResult('Course', (slug, locale = 'en-US', api = 'cda') => {
+module.exports.getCourse = throwOnEmptyResult('Course', (slug, locale = 'en-US', api = 'cda') =>
   // Even though we need a single entry, we request it using the collection endpoint
   // To get all the linked refs in one go, the SDK will use the data and resolve the links automatically
-  return getClient(api).getEntries({
-    content_type: 'course',
-    'fields.slug': slug,
-    locale,
-    include: 2
-  })
-    .then((response) => response.items[0])
-})
+  getClient(api)
+    .getEntries({
+      content_type: 'course',
+      'fields.slug': slug,
+      locale,
+      include: 2,
+    })
+    .then(response => response.items[0])
+)
 
-module.exports.getCategories = throwOnEmptyResult('Course', (locale = 'en-US', api = 'cda') => {
-  return getClient(api).getEntries({content_type: 'category', locale})
-    .then((response) => response.items)
-})
+module.exports.getCategories = throwOnEmptyResult('Course', (locale = 'en-US', api = 'cda') =>
+  getClient(api)
+    .getEntries({ content_type: 'category', locale })
+    .then(response => response.items)
+)
 
 /**
  * Get Courses by Categories
@@ -143,19 +160,20 @@ module.exports.getCategories = throwOnEmptyResult('Course', (locale = 'en-US', a
  * @param api - string - the api enpoint to use when fetching the data
  * @returns {Object}
  */
-module.exports.getCoursesByCategory = throwOnEmptyResult('Category', (category, locale = 'en-US', api = 'cda') => {
-  return getClient(api).getEntries({
-    content_type: 'course',
-    'fields.categories.sys.id': category,
-    locale,
-    order: '-sys.createdAt',
-    include: 1
-  })
-    .then((response) => response.items)
-})
+module.exports.getCoursesByCategory = throwOnEmptyResult('Category', (category, locale = 'en-US', api = 'cda') =>
+  getClient(api)
+    .getEntries({
+      content_type: 'course',
+      'fields.categories.sys.id': category,
+      locale,
+      order: '-sys.createdAt',
+      include: 1,
+    })
+    .then(response => response.items)
+)
 
 // Utility function
-function getClient (api = 'cda') {
+function getClient(api = 'cda') {
   return api === 'cda' ? deliveryClient : previewClient
 }
 
@@ -167,16 +185,15 @@ function getClient (api = 'cda') {
  * @return {Object}           The result of `fn`, if not empty
  * @throws {Error}    When `fn` returns an empty result
  */
-function throwOnEmptyResult (context, fn) {
-  return function (...params) {
-    return fn(...params)
-      .then((data) => {
-        if (!data) {
-          var err = new Error(`${context} Not Found`)
-          err.status = 404
-          throw err
-        }
-        return data
-      })
+function throwOnEmptyResult(context, fn) {
+  return function(...params) {
+    return fn(...params).then(data => {
+      if (!data) {
+        var err = new Error(`${context} Not Found`)
+        err.status = 404
+        throw err
+      }
+      return data
+    })
   }
 }
